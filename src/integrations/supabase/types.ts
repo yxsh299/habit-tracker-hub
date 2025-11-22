@@ -14,7 +14,125 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      habit_completions: {
+        Row: {
+          completed_at: string
+          habit_id: string
+          id: string
+          missed_reason: string | null
+          source: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          habit_id: string
+          id?: string
+          missed_reason?: string | null
+          source: string
+          status: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          habit_id?: string
+          id?: string
+          missed_reason?: string | null
+          source?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habit_completions_habit_id_fkey"
+            columns: ["habit_id"]
+            isOneToOne: false
+            referencedRelation: "habits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      habits: {
+        Row: {
+          category: string | null
+          created_at: string
+          current_streak: number
+          description: string | null
+          icon_url: string | null
+          id: string
+          longest_streak: number
+          name: string
+          occurrence: string
+          specific_day: number | null
+          specific_time: string | null
+          time_of_day: string | null
+          total_completions: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          current_streak?: number
+          description?: string | null
+          icon_url?: string | null
+          id?: string
+          longest_streak?: number
+          name: string
+          occurrence: string
+          specific_day?: number | null
+          specific_time?: string | null
+          time_of_day?: string | null
+          total_completions?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          current_streak?: number
+          description?: string | null
+          icon_url?: string | null
+          id?: string
+          longest_streak?: number
+          name?: string
+          occurrence?: string
+          specific_day?: number | null
+          specific_time?: string | null
+          time_of_day?: string | null
+          total_completions?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
