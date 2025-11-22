@@ -1,73 +1,80 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Habit } from '@/types';
 import HabitCard from '@/components/HabitCard';
 import SettingsPanel from '@/components/SettingsPanel';
 import MilestoneBadges from '@/components/MilestoneBadges';
 import MissedModal from '@/components/MissedModal';
+import HeroSection from '@/components/HeroSection';
+import AddHabitDialog from '@/components/AddHabitDialog';
 import { simulateWebhookComplete, checkDelayedNudge, sendStreakCelebration } from '@/services/whatsappSim';
 import { addLogEntry } from '@/services/completionLog';
 import { useToast } from '@/hooks/use-toast';
-
-const sampleHabits: Habit[] = [
-  {
-    id: 'h1',
-    name: 'Morning Meditation',
-    description: '10 minutes of mindfulness practice',
-    timeOfDay: 'morning',
-    occurrence: 'daily',
-    currentStreak: 12,
-    longestStreak: 28,
-    completedToday: false,
-    totalCompletions: 45,
-    createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'h2',
-    name: 'Read for 30min',
-    description: 'Non-fiction or learning material',
-    timeOfDay: 'evening',
-    occurrence: 'daily',
-    currentStreak: 5,
-    longestStreak: 15,
-    completedToday: false,
-    totalCompletions: 32,
-    createdAt: new Date(Date.now() - 32 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'h3',
-    name: 'Exercise',
-    description: '30 minutes workout or yoga',
-    timeOfDay: 'morning',
-    occurrence: 'weekdays',
-    currentStreak: 8,
-    longestStreak: 22,
-    completedToday: false,
-    totalCompletions: 56,
-    createdAt: new Date(Date.now() - 80 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'h4',
-    name: 'Gratitude Journal',
-    description: 'Write 3 things you\'re grateful for',
-    timeOfDay: 'evening',
-    occurrence: 'daily',
-    currentStreak: 3,
-    longestStreak: 10,
-    completedToday: false,
-    totalCompletions: 18,
-    createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { Loader2 } from 'lucide-react';
 
 const Dashboard = () => {
   const { toast } = useToast();
-  const [habits, setHabits] = useState<Habit[]>(sampleHabits);
+  const { user } = useAuth();
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const [loading, setLoading] = useState(true);
   const [missedModalOpen, setMissedModalOpen] = useState(false);
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
+  const [addHabitOpen, setAddHabitOpen] = useState(false);
+
+  const fetchHabits = async () => {
+    if (!user) return;
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('habits')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Check if each habit was completed today
+      const today = new Date().toISOString().split('T')[0];
+      const habitsWithCompletions = await Promise.all(
+        (data || []).map(async (habit) => {
+          const { data: completions } = await supabase
+            .from('habit_completions')
+            .select('*')
+            .eq('habit_id', habit.id)
+            .eq('status', 'completed')
+            .gte('completed_at', `${today}T00:00:00`)
+            .lte('completed_at', `${today}T23:59:59`);
+
+          return {
+            ...habit,
+            time_of_day: habit.time_of_day as 'morning' | 'afternoon' | 'evening' | 'anytime',
+            occurrence: habit.occurrence as 'daily' | 'weekly' | 'monthly' | 'weekdays',
+            completedToday: (completions?.length || 0) > 0,
+          } as Habit;
+        })
+      );
+
+      setHabits(habitsWithCompletions);
+    } catch (error: any) {
+      toast({
+        title: 'Error fetching habits',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchHabits();
+  }, [user]);
 
   const handleComplete = async (habitId: string) => {
     const habit = habits.find(h => h.id === habitId);
-    if (!habit) return;
+    if (!habit || !user) return;
 
     // Step 1: Set pending state
     setHabits(prev =>
@@ -76,24 +83,39 @@ const Dashboard = () => {
       )
     );
 
-    // Log pending state
-    addLogEntry({
-      timestamp: new Date().toISOString(),
-      habitId: habit.id,
-      habitName: habit.name,
-      status: 'pending',
-      source: 'user',
-    });
-
     try {
       // Step 2: Simulate webhook call
       const response = await simulateWebhookComplete(habit.id, habit.name);
 
       if (response.success) {
-        // Step 3: Update habit on success
-        const newStreak = habit.currentStreak + 1;
-        const newLongestStreak = Math.max(habit.longestStreak, newStreak);
+        // Step 3: Update habit in database
+        const newStreak = habit.current_streak + 1;
+        const newLongestStreak = Math.max(habit.longest_streak, newStreak);
         
+        const { error: updateError } = await supabase
+          .from('habits')
+          .update({
+            current_streak: newStreak,
+            longest_streak: newLongestStreak,
+            total_completions: habit.total_completions + 1,
+          })
+          .eq('id', habitId);
+
+        if (updateError) throw updateError;
+
+        // Log completion
+        const { error: completionError } = await supabase
+          .from('habit_completions')
+          .insert({
+            habit_id: habitId,
+            user_id: user.id,
+            status: 'completed',
+            source: 'webhook',
+          });
+
+        if (completionError) throw completionError;
+
+        // Update local state
         setHabits(prev =>
           prev.map(h =>
             h.id === habitId
@@ -101,27 +123,13 @@ const Dashboard = () => {
                   ...h,
                   completedToday: true,
                   pending: false,
-                  currentStreak: newStreak,
-                  longestStreak: newLongestStreak,
-                  totalCompletions: h.totalCompletions + 1,
-                  lastCompletedAt: new Date().toISOString(),
+                  current_streak: newStreak,
+                  longest_streak: newLongestStreak,
+                  total_completions: h.total_completions + 1,
                 }
               : h
           )
         );
-
-        // Log completion
-        addLogEntry({
-          timestamp: new Date().toISOString(),
-          habitId: habit.id,
-          habitName: habit.name,
-          status: 'completed',
-          source: 'webhook',
-          metadata: {
-            streakDays: newStreak,
-            timeOfDay: habit.timeOfDay,
-          },
-        });
 
         // Celebrate milestones
         if (newStreak % 7 === 0) {
@@ -133,8 +141,8 @@ const Dashboard = () => {
           description: `${habit.name} - ${newStreak} day streak!`,
         });
       }
-    } catch (error) {
-      console.error('Webhook error:', error);
+    } catch (error: any) {
+      console.error('Error completing habit:', error);
       setHabits(prev =>
         prev.map(h =>
           h.id === habitId ? { ...h, pending: false } : h
@@ -143,7 +151,7 @@ const Dashboard = () => {
       
       toast({
         title: 'Error',
-        description: 'Failed to complete habit. Please try again.',
+        description: error.message || 'Failed to complete habit. Please try again.',
         variant: 'destructive',
       });
     }
@@ -154,74 +162,117 @@ const Dashboard = () => {
     setMissedModalOpen(true);
   };
 
-  const handleMissedSubmit = (reason: string) => {
-    if (!selectedHabitId) return;
+  const handleMissedSubmit = async (reason: string) => {
+    if (!selectedHabitId || !user) return;
 
     const habit = habits.find(h => h.id === selectedHabitId);
     if (!habit) return;
 
-    setHabits(prev =>
-      prev.map(h =>
-        h.id === selectedHabitId
-          ? {
-              ...h,
-              missed: true,
-              missedReason: reason,
-              currentStreak: 0,
-            }
-          : h
-      )
-    );
+    try {
+      // Update habit in database
+      const { error: updateError } = await supabase
+        .from('habits')
+        .update({
+          current_streak: 0,
+        })
+        .eq('id', selectedHabitId);
 
-    addLogEntry({
-      timestamp: new Date().toISOString(),
-      habitId: habit.id,
-      habitName: habit.name,
-      status: 'missed',
-      source: 'user',
-      metadata: {
-        reason,
-      },
-    });
+      if (updateError) throw updateError;
 
-    checkDelayedNudge(habit.id, habit.name, reason);
+      // Log missed completion
+      const { error: completionError } = await supabase
+        .from('habit_completions')
+        .insert({
+          habit_id: selectedHabitId,
+          user_id: user.id,
+          status: 'missed',
+          source: 'user',
+          missed_reason: reason,
+        });
 
-    toast({
-      title: 'Noted',
-      description: 'We\'ll help you get back on track tomorrow',
-    });
+      if (completionError) throw completionError;
+
+      // Update local state
+      setHabits(prev =>
+        prev.map(h =>
+          h.id === selectedHabitId
+            ? {
+                ...h,
+                missed: true,
+                missedReason: reason,
+                current_streak: 0,
+              }
+            : h
+        )
+      );
+
+      checkDelayedNudge(habit.id, habit.name, reason);
+
+      toast({
+        title: 'Noted',
+        description: 'We\'ll help you get back on track tomorrow',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
 
     setSelectedHabitId(null);
   };
 
-  const longestStreak = Math.max(...habits.map(h => h.longestStreak), 0);
-  const totalCompletions = habits.reduce((sum, h) => sum + h.totalCompletions, 0);
+  const longestStreak = Math.max(...habits.map(h => h.longest_streak), 0);
+  const totalCompletions = habits.reduce((sum, h) => sum + h.total_completions, 0);
 
   const selectedHabit = habits.find(h => h.id === selectedHabitId);
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-accent" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen relative z-10 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
-        <header className="mb-8">
-          <h1 className="text-4xl font-bold text-text-primary mb-2">Habito</h1>
-          <p className="text-text-secondary">Your daily habits, tracked with care</p>
-        </header>
+      <div className="max-w-6xl mx-auto space-y-6">
+        <HeroSection 
+          onAddHabit={() => setAddHabitOpen(true)}
+          userName={user?.user_metadata?.full_name}
+        />
 
         <SettingsPanel habits={habits} />
         
         <MilestoneBadges longestStreak={longestStreak} totalCompletions={totalCompletions} />
 
-        <div className="grid gap-4 md:grid-cols-2">
-          {habits.map(habit => (
-            <HabitCard
-              key={habit.id}
-              habit={habit}
-              onComplete={handleComplete}
-              onMissed={handleMissed}
-            />
-          ))}
-        </div>
+        {habits.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-text-secondary text-lg">
+              No habits yet. Click "Add Habit" to get started! 🚀
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {habits.map(habit => (
+              <HabitCard
+                key={habit.id}
+                habit={habit}
+                onComplete={handleComplete}
+                onMissed={handleMissed}
+              />
+            ))}
+          </div>
+        )}
       </div>
+
+      <AddHabitDialog
+        open={addHabitOpen}
+        onOpenChange={setAddHabitOpen}
+        onHabitAdded={fetchHabits}
+      />
 
       {selectedHabit && (
         <MissedModal

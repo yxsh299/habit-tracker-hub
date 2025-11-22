@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,12 +8,34 @@ import BackgroundVideo from "@/components/BackgroundVideo";
 import Dashboard from "@/screens/Dashboard";
 import Analyzer from "@/screens/Analyzer";
 import { Button } from "@/components/ui/button";
-import { BarChart3, Home } from "lucide-react";
+import { BarChart3, Home, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   const [currentView, setCurrentView] = useState<'dashboard' | 'analyzer'>('dashboard');
+  const { user, loading, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/auth');
+    }
+  }, [user, loading, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-bg-900">
+        <Loader2 className="w-8 h-8 animate-spin text-accent" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -55,6 +78,15 @@ const App = () => {
                 >
                   <BarChart3 className="w-4 h-4 mr-2" />
                   Analytics
+                </Button>
+
+                <Button
+                  onClick={signOut}
+                  variant="ghost"
+                  size="sm"
+                  className="border-border text-text-secondary hover:bg-bg-700 hover:text-text-primary"
+                >
+                  <LogOut className="w-4 h-4" />
                 </Button>
               </div>
             </div>

@@ -10,6 +10,8 @@ const getRecurrenceRule = (occurrence: Habit['occurrence']): string => {
       return 'FREQ=DAILY';
     case 'weekly':
       return 'FREQ=WEEKLY';
+    case 'monthly':
+      return 'FREQ=MONTHLY';
     case 'weekdays':
       return 'FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR';
     default:
@@ -17,7 +19,7 @@ const getRecurrenceRule = (occurrence: Habit['occurrence']): string => {
   }
 };
 
-const getTimeForHabit = (timeOfDay: Habit['timeOfDay']): { hour: number; minute: number } => {
+const getTimeForHabit = (timeOfDay: Habit['time_of_day']): { hour: number; minute: number } => {
   switch (timeOfDay) {
     case 'morning':
       return { hour: 8, minute: 0 };
@@ -44,8 +46,8 @@ export const generateICSFile = (habits: Habit[]): string => {
   ].join('\r\n');
 
   habits.forEach(habit => {
-    const { hour, minute } = getTimeForHabit(habit.timeOfDay);
-    const startDate = new Date(habit.createdAt);
+    const { hour, minute } = getTimeForHabit(habit.time_of_day);
+    const startDate = new Date(habit.created_at);
     startDate.setHours(hour, minute, 0, 0);
     
     const endDate = new Date(startDate);
@@ -63,7 +65,7 @@ export const generateICSFile = (habits: Habit[]): string => {
       `DTEND:${dtend}`,
       `RRULE:${rrule}`,
       `SUMMARY:${habit.name}`,
-      `DESCRIPTION:${habit.description}`,
+      `DESCRIPTION:${habit.description || ''}`,
       'STATUS:CONFIRMED',
       'SEQUENCE:0',
       'END:VEVENT',
