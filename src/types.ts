@@ -1,18 +1,25 @@
 export interface Habit {
   id: string;
+  user_id: string;
   name: string;
-  description: string;
-  timeOfDay: 'morning' | 'afternoon' | 'evening' | 'anytime';
-  occurrence: 'daily' | 'weekly' | 'weekdays';
-  currentStreak: number;
-  longestStreak: number;
-  completedToday: boolean;
-  totalCompletions: number;
-  createdAt: string;
-  lastCompletedAt?: string;
+  description: string | null;
+  category: string | null;
+  time_of_day: 'morning' | 'afternoon' | 'evening' | 'anytime';
+  occurrence: 'daily' | 'weekly' | 'monthly' | 'weekdays';
+  specific_time: string | null;
+  specific_day: number | null;
+  icon_url: string | null;
+  current_streak: number;
+  longest_streak: number;
+  total_completions: number;
+  created_at: string;
+  updated_at: string;
+  // Computed fields
+  completedToday?: boolean;
   pending?: boolean;
   missed?: boolean;
   missedReason?: string;
+  lastCompletedAt?: string;
 }
 
 export interface LogRecord {
