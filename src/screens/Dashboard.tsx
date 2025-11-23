@@ -230,15 +230,15 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center pb-20">
         <Loader2 className="w-8 h-8 animate-spin text-accent" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen relative z-10 py-8 px-4">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="min-h-screen pb-24 pt-6 px-4">
+      <div className="max-w-2xl mx-auto space-y-6">
         <HeroSection 
           onAddHabit={() => setAddHabitOpen(true)}
           userName={user?.user_metadata?.full_name}
@@ -249,13 +249,13 @@ const Dashboard = () => {
         <MilestoneBadges longestStreak={longestStreak} totalCompletions={totalCompletions} />
 
         {habits.length === 0 ? (
-          <div className="text-center py-12">
+          <div className="text-center py-12 ios-card">
             <p className="text-text-secondary text-lg">
               No habits yet. Click "Add Habit" to get started! 🚀
             </p>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4">
             {habits.map(habit => (
               <HabitCard
                 key={habit.id}
