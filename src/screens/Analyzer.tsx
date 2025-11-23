@@ -138,7 +138,7 @@ const Analyzer = () => {
   const maxObstacleCount = Math.max(...Object.values(analytics.obstacleBreakdown), 1);
 
   return (
-    <div className="analyzer-container relative z-10">
+    <div className="analyzer-container relative z-10 pb-24">
       <div className="analyzer-header">
         <div>
           <h1 className="text-3xl font-bold text-text-primary mb-1">Analytics</h1>
