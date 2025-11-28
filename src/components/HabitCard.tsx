@@ -8,9 +8,10 @@ interface HabitCardProps {
   habit: Habit;
   onComplete: (habitId: string) => void;
   onMissed: (habitId: string) => void;
+  onClick?: (habit: Habit) => void;
 }
 
-const HabitCard = ({ habit, onComplete, onMissed }: HabitCardProps) => {
+const HabitCard = ({ habit, onComplete, onMissed, onClick }: HabitCardProps) => {
   const getTimeOfDayIcon = (timeOfDay: string) => {
     switch (timeOfDay) {
       case 'morning':
@@ -27,11 +28,12 @@ const HabitCard = ({ habit, onComplete, onMissed }: HabitCardProps) => {
   return (
     <Card
       className={cn(
-        'bg-bg-800 border-border transition-all duration-200',
+        'bg-bg-800 border-border transition-all duration-200 cursor-pointer hover:border-accent/30',
         habit.completedToday && 'border-accent/50 bg-accent/5',
         habit.pending && 'opacity-70 pointer-events-none',
         habit.missed && 'border-warning/50 bg-warning/5'
       )}
+      onClick={() => onClick?.(habit)}
     >
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
@@ -89,16 +91,22 @@ const HabitCard = ({ habit, onComplete, onMissed }: HabitCardProps) => {
 
         {/* Action Buttons */}
         {!habit.completedToday && !habit.pending && !habit.missed && (
-          <div className="flex gap-2">
+          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
             <Button
-              onClick={() => onComplete(habit.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onComplete(habit.id);
+              }}
               className="flex-1 bg-accent hover:bg-accent-hover text-accent-foreground"
             >
               <CheckCircle2 className="w-4 h-4 mr-2" />
               Done
             </Button>
             <Button
-              onClick={() => onMissed(habit.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onMissed(habit.id);
+              }}
               variant="outline"
               size="icon"
               className="border-border text-text-secondary hover:bg-bg-700 hover:text-text-primary"
