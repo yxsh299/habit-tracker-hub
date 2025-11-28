@@ -7,6 +7,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import BackgroundVideo from "@/components/BackgroundVideo";
 import Dashboard from "@/screens/Dashboard";
 import Analyzer from "@/screens/Analyzer";
+import YourHabits from "@/screens/YourHabits";
+import Settings from "@/screens/Settings";
 import BottomNavigation from "@/components/BottomNavigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
@@ -43,10 +45,8 @@ const App = () => {
       case 'analytics':
         return <Analyzer />;
       case 'habits':
-        const YourHabits = require('@/screens/YourHabits').default;
         return <YourHabits />;
       case 'settings':
-        const Settings = require('@/screens/Settings').default;
         return <Settings />;
       default:
         return <Dashboard />;
