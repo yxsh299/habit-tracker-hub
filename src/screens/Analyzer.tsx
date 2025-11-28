@@ -2,9 +2,12 @@ import { useState, useEffect } from 'react';
 import { TimeRange, AnalyticsData } from '@/types';
 import { getCompletionLog } from '@/services/completionLog';
 import AnalyticsHeatmap, { HeatmapData } from '@/components/AnalyticsHeatmap';
+import AnalyticsSummaryCards from '@/components/AnalyticsSummaryCards';
+import YearHeatmap from '@/components/YearHeatmap';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
 import '@/theme/analyzer.css';
 
 const Analyzer = () => {
@@ -19,11 +22,14 @@ const Analyzer = () => {
     dailySuccessRate: [],
   });
   const [heatmapData, setHeatmapData] = useState<HeatmapData[]>([]);
+  const [yearData, setYearData] = useState<{ date: string; completed: boolean }[]>([]);
+  const [showYearView, setShowYearView] = useState(false);
   const [animateGraph, setAnimateGraph] = useState(false);
 
   useEffect(() => {
     calculateAnalytics();
     fetchHeatmapData();
+    fetchYearData();
   }, [timeRange, user]);
 
   const fetchHeatmapData = async () => {
@@ -53,6 +59,30 @@ const Analyzer = () => {
       }));
       
       setHeatmapData(heatmap);
+    }
+  };
+
+  const fetchYearData = async () => {
+    if (!user) return;
+
+    const currentYear = new Date().getFullYear();
+    const startDate = new Date(currentYear, 0, 1);
+    const endDate = new Date(currentYear, 11, 31);
+
+    const { data, error } = await supabase
+      .from('habit_completions')
+      .select('completed_at, status')
+      .eq('user_id', user.id)
+      .gte('completed_at', startDate.toISOString())
+      .lte('completed_at', endDate.toISOString());
+
+    if (!error && data) {
+      const yearCompletions = data.map(completion => ({
+        date: new Date(completion.completed_at).toISOString().split('T')[0],
+        completed: completion.status === 'completed',
+      }));
+      
+      setYearData(yearCompletions);
     }
   };
 
@@ -195,33 +225,31 @@ const Analyzer = () => {
         </div>
       </div>
 
-      <div className="metrics-grid">
-        <div className="metric-card">
-          <div className="metric-label">Total Completions</div>
-          <div className="metric-value">{analytics.totalCompletions}</div>
-        </div>
-
-        <div className="metric-card">
-          <div className="metric-label">Current Streak</div>
-          <div className="metric-value">
-            {analytics.currentStreak}
-            <span className="metric-suffix">days</span>
-          </div>
-        </div>
-
-        <div className="metric-card">
-          <div className="metric-label">Success Rate</div>
-          <div className="metric-value">
-            {analytics.successRate.toFixed(1)}
-            <span className="metric-suffix">%</span>
-          </div>
-        </div>
-      </div>
+      {/* Summary Cards */}
+      <AnalyticsSummaryCards
+        completions={analytics.totalCompletions}
+        currentStreak={analytics.currentStreak}
+        successRate={analytics.successRate}
+      />
 
       {/* GitHub-style Heatmap */}
       <div className="chart-section">
-        <h2 className="chart-title">Activity Heatmap</h2>
-        <AnalyticsHeatmap data={heatmapData} />
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="chart-title">Activity Heatmap</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowYearView(!showYearView)}
+            className="text-accent hover:text-accent-hover"
+          >
+            {showYearView ? 'Show Month' : 'Show Year'}
+          </Button>
+        </div>
+        {showYearView ? (
+          <YearHeatmap year={new Date().getFullYear()} completionData={yearData} />
+        ) : (
+          <AnalyticsHeatmap data={heatmapData} />
+        )}
       </div>
 
       {/* Progress Bars for Categories */}

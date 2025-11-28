@@ -8,6 +8,7 @@ import MilestoneBadges from '@/components/MilestoneBadges';
 import MissedModal from '@/components/MissedModal';
 import HeroSection from '@/components/HeroSection';
 import AddHabitDialog from '@/components/AddHabitDialog';
+import HabitDetailModal from '@/components/HabitDetailModal';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { simulateWebhookComplete, checkDelayedNudge, sendStreakCelebration } from '@/services/whatsappSim';
 import { addLogEntry } from '@/services/completionLog';
@@ -27,6 +28,7 @@ const Dashboard = () => {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [activeTaskStartTime, setActiveTaskStartTime] = useState<Date | null>(null);
   const [taskBackgroundImage, setTaskBackgroundImage] = useState<string | undefined>();
+  const [detailHabitId, setDetailHabitId] = useState<string | null>(null);
 
   const fetchHabits = async () => {
     if (!user) return;
@@ -234,6 +236,7 @@ const Dashboard = () => {
 
   const selectedHabit = habits.find(h => h.id === selectedHabitId);
   const activeTask = habits.find(h => h.id === activeTaskId);
+  const detailHabit = habits.find(h => h.id === detailHabitId);
 
   // Sort habits by specific time for today's tasks
   const todaysTasks = habits
@@ -339,6 +342,7 @@ const Dashboard = () => {
                   habit={habit}
                   onComplete={handleComplete}
                   onMissed={handleMissed}
+                  onClick={(h) => setDetailHabitId(h.id)}
                 />
               ))}
             </div>
@@ -363,6 +367,12 @@ const Dashboard = () => {
           habitName={selectedHabit.name}
         />
       )}
+
+      <HabitDetailModal
+        habit={detailHabit || null}
+        open={!!detailHabitId}
+        onClose={() => setDetailHabitId(null)}
+      />
     </div>
   );
 };
