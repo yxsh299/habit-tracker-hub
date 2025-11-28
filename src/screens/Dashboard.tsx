@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Habit } from '@/types';
 import HabitCard from '@/components/HabitCard';
+import TaskCard from '@/components/TaskCard';
+import ActiveTaskHero from '@/components/ActiveTaskHero';
 import SettingsPanel from '@/components/SettingsPanel';
 import MilestoneBadges from '@/components/MilestoneBadges';
 import MissedModal from '@/components/MissedModal';
 import HeroSection from '@/components/HeroSection';
 import AddHabitDialog from '@/components/AddHabitDialog';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { simulateWebhookComplete, checkDelayedNudge, sendStreakCelebration } from '@/services/whatsappSim';
 import { addLogEntry } from '@/services/completionLog';
 import { useToast } from '@/hooks/use-toast';
@@ -21,6 +24,9 @@ const Dashboard = () => {
   const [missedModalOpen, setMissedModalOpen] = useState(false);
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
   const [addHabitOpen, setAddHabitOpen] = useState(false);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [activeTaskStartTime, setActiveTaskStartTime] = useState<Date | null>(null);
+  const [taskBackgroundImage, setTaskBackgroundImage] = useState<string | undefined>();
 
   const fetchHabits = async () => {
     if (!user) return;
@@ -227,6 +233,41 @@ const Dashboard = () => {
   const totalCompletions = habits.reduce((sum, h) => sum + h.total_completions, 0);
 
   const selectedHabit = habits.find(h => h.id === selectedHabitId);
+  const activeTask = habits.find(h => h.id === activeTaskId);
+
+  // Sort habits by specific time for today's tasks
+  const todaysTasks = habits
+    .filter(h => !h.completedToday)
+    .sort((a, b) => {
+      if (!a.specific_time && !b.specific_time) return 0;
+      if (!a.specific_time) return 1;
+      if (!b.specific_time) return -1;
+      return a.specific_time.localeCompare(b.specific_time);
+    });
+
+  const handleStartTask = (habitId: string) => {
+    setActiveTaskId(habitId);
+    setActiveTaskStartTime(new Date());
+  };
+
+  const handleCompleteActiveTask = async () => {
+    if (!activeTaskId) return;
+    await handleComplete(activeTaskId);
+    setActiveTaskId(null);
+    setActiveTaskStartTime(null);
+    setTaskBackgroundImage(undefined);
+  };
+
+  const handleCancelActiveTask = () => {
+    setActiveTaskId(null);
+    setActiveTaskStartTime(null);
+    setTaskBackgroundImage(undefined);
+  };
+
+  const handleBackgroundChange = (file: File) => {
+    const url = URL.createObjectURL(file);
+    setTaskBackgroundImage(url);
+  };
 
   if (loading) {
     return (
@@ -244,6 +285,40 @@ const Dashboard = () => {
           userName={user?.user_metadata?.full_name}
         />
 
+        {/* Active Task Hero */}
+        {activeTask && activeTaskStartTime && (
+          <ActiveTaskHero
+            taskName={activeTask.name}
+            startTime={activeTaskStartTime}
+            estimatedDuration={30} // Default 30 minutes
+            backgroundImage={taskBackgroundImage}
+            onComplete={handleCompleteActiveTask}
+            onCancel={handleCancelActiveTask}
+            onBackgroundChange={handleBackgroundChange}
+          />
+        )}
+
+        {/* Today's Tasks - Horizontal Scrollable */}
+        {todaysTasks.length > 0 && (
+          <div className="space-y-3">
+            <h2 className="text-xl font-bold text-text-primary">Today's Tasks</h2>
+            <ScrollArea className="w-full">
+              <div className="flex gap-3 pb-2">
+                {todaysTasks.map(habit => (
+                  <TaskCard
+                    key={habit.id}
+                    habit={habit}
+                    onStart={handleStartTask}
+                    onComplete={handleComplete}
+                    isActive={habit.id === activeTaskId}
+                  />
+                ))}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </div>
+        )}
+
         <SettingsPanel habits={habits} />
         
         <MilestoneBadges longestStreak={longestStreak} totalCompletions={totalCompletions} />
@@ -255,15 +330,18 @@ const Dashboard = () => {
             </p>
           </div>
         ) : (
-          <div className="grid gap-4">
-            {habits.map(habit => (
-              <HabitCard
-                key={habit.id}
-                habit={habit}
-                onComplete={handleComplete}
-                onMissed={handleMissed}
-              />
-            ))}
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-text-primary">All Habits</h2>
+            <div className="grid gap-4">
+              {habits.map(habit => (
+                <HabitCard
+                  key={habit.id}
+                  habit={habit}
+                  onComplete={handleComplete}
+                  onMissed={handleMissed}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>

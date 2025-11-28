@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Habit } from '@/types';
 import HabitCard from '@/components/HabitCard';
+import HabitTemplates, { HabitTemplate } from '@/components/HabitTemplates';
 import AddHabitDialog from '@/components/AddHabitDialog';
 import { Button } from '@/components/ui/button';
 import { Plus, Loader2 } from 'lucide-react';
@@ -72,6 +73,36 @@ const YourHabits = () => {
     // Add missed logic here
   };
 
+  const handleSelectTemplate = async (template: HabitTemplate) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase.from('habits').insert({
+        user_id: user.id,
+        name: template.name,
+        description: template.description,
+        category: template.category,
+        time_of_day: template.time_of_day,
+        occurrence: 'daily',
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Habit created! 🎉',
+        description: `${template.name} has been added to your habits`,
+      });
+
+      fetchHabits();
+    } catch (error: any) {
+      toast({
+        title: 'Error creating habit',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center pb-20">
@@ -96,22 +127,29 @@ const YourHabits = () => {
           </Button>
         </div>
 
+        {/* Habit Templates */}
+        <HabitTemplates onSelectTemplate={handleSelectTemplate} />
+
+        {/* User's Habits */}
         {habits.length === 0 ? (
           <div className="text-center py-12 ios-card">
             <p className="text-text-secondary text-lg">
-              No habits yet. Create your first habit! 🚀
+              No habits yet. Select a template or create your first habit! 🚀
             </p>
           </div>
         ) : (
-          <div className="grid gap-4">
-            {habits.map((habit) => (
-              <HabitCard
-                key={habit.id}
-                habit={habit}
-                onComplete={handleComplete}
-                onMissed={handleMissed}
-              />
-            ))}
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-text-primary">Your Habits</h2>
+            <div className="grid gap-4">
+              {habits.map((habit) => (
+                <HabitCard
+                  key={habit.id}
+                  habit={habit}
+                  onComplete={handleComplete}
+                  onMissed={handleMissed}
+                />
+              ))}
+            </div>
           </div>
         )}
       </div>

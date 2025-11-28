@@ -1,9 +1,14 @@
 import { useState, useEffect } from 'react';
 import { TimeRange, AnalyticsData } from '@/types';
 import { getCompletionLog } from '@/services/completionLog';
+import AnalyticsHeatmap, { HeatmapData } from '@/components/AnalyticsHeatmap';
+import { Progress } from '@/components/ui/progress';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import '@/theme/analyzer.css';
 
 const Analyzer = () => {
+  const { user } = useAuth();
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
   const [analytics, setAnalytics] = useState<AnalyticsData>({
     totalCompletions: 0,
@@ -13,11 +18,43 @@ const Analyzer = () => {
     obstacleBreakdown: {},
     dailySuccessRate: [],
   });
+  const [heatmapData, setHeatmapData] = useState<HeatmapData[]>([]);
   const [animateGraph, setAnimateGraph] = useState(false);
 
   useEffect(() => {
     calculateAnalytics();
-  }, [timeRange]);
+    fetchHeatmapData();
+  }, [timeRange, user]);
+
+  const fetchHeatmapData = async () => {
+    if (!user) return;
+
+    const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : timeRange === '90d' ? 90 : 365;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const { data, error } = await supabase
+      .from('habit_completions')
+      .select('completed_at')
+      .eq('user_id', user.id)
+      .eq('status', 'completed')
+      .gte('completed_at', startDate.toISOString());
+
+    if (!error && data) {
+      const countByDate = new Map<string, number>();
+      data.forEach(completion => {
+        const date = new Date(completion.completed_at).toISOString().split('T')[0];
+        countByDate.set(date, (countByDate.get(date) || 0) + 1);
+      });
+
+      const heatmap: HeatmapData[] = Array.from(countByDate.entries()).map(([date, count]) => ({
+        date,
+        count,
+      }));
+      
+      setHeatmapData(heatmap);
+    }
+  };
 
   const calculateAnalytics = () => {
     const log = getCompletionLog();
@@ -178,6 +215,32 @@ const Analyzer = () => {
             {analytics.successRate.toFixed(1)}
             <span className="metric-suffix">%</span>
           </div>
+        </div>
+      </div>
+
+      {/* GitHub-style Heatmap */}
+      <div className="chart-section">
+        <h2 className="chart-title">Activity Heatmap</h2>
+        <AnalyticsHeatmap data={heatmapData} />
+      </div>
+
+      {/* Progress Bars for Categories */}
+      <div className="chart-section">
+        <h2 className="chart-title mb-4">Completion Rate by Time of Day</h2>
+        <div className="space-y-4">
+          {Object.entries(analytics.timeOfDayBreakdown).map(([time, count]) => {
+            const total = Object.values(analytics.timeOfDayBreakdown).reduce((a, b) => a + b, 0);
+            const percentage = total > 0 ? (count / total) * 100 : 0;
+            return (
+              <div key={time} className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-text-secondary capitalize">{time}</span>
+                  <span className="text-text-primary font-semibold">{count} ({percentage.toFixed(0)}%)</span>
+                </div>
+                <Progress value={percentage} className="h-2" />
+              </div>
+            );
+          })}
         </div>
       </div>
 
