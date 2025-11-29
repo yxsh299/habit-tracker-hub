@@ -6,39 +6,39 @@
 
 @layer base {
   :root {
-    /* iOS Native Dark Theme */
-    --bg-900: 220 13% 9%;
-    --bg-800: 220 13% 13%;
-    --bg-700: 220 13% 18%;
-    --bg-600: 220 13% 23%;
+    /* Red/Black Theme - Inspired by fitness apps */
+    --bg-900: 0 0% 7%;
+    --bg-800: 0 0% 10%;
+    --bg-700: 0 0% 14%;
+    --bg-600: 0 0% 18%;
     
-    --text-primary: 0 0% 95%;
-    --text-secondary: 0 0% 65%;
-    --text-muted: 0 0% 45%;
+    --text-primary: 0 0% 98%;
+    --text-secondary: 0 0% 70%;
+    --text-muted: 0 0% 50%;
     
-    --accent: 221 83% 63%;
-    --accent-hover: 221 83% 70%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 14 100% 61%;
+    --accent-hover: 14 100% 68%;
+    --accent-foreground: 0 0% 0%;
     
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
     
-    --danger: 0 72% 51%;
+    --danger: 0 84% 60%;
     --danger-foreground: 0 0% 100%;
     
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
     
-    --border: 220 13% 23%;
-    --border-subtle: 220 13% 18%;
+    --border: 0 0% 18%;
+    --border-subtle: 0 0% 12%;
     
-    --card: 220 13% 15%;
-    --card-hover: 220 13% 18%;
+    --card: 0 0% 12%;
+    --card-hover: 0 0% 15%;
     
-    --input: 220 13% 18%;
-    --ring: 221 83% 63%;
+    --input: 0 0% 14%;
+    --ring: 14 100% 61%;
     
-    --radius: 1rem;
+    --radius: 1.25rem;
     
     /* iOS Card styling */
     --card-padding: 1rem;
@@ -46,12 +46,13 @@
     
     /* Gradients */
     --gradient-success: linear-gradient(135deg, hsl(160 84% 39%), hsl(142 76% 36%));
-    --gradient-card: linear-gradient(180deg, hsl(220 13% 15%), hsl(220 13% 12%));
+    --gradient-accent: linear-gradient(135deg, hsl(14 100% 61%), hsl(14 100% 68%));
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 12%), hsl(0 0% 8%));
     
     /* Shadows */
-    --shadow-card: 0 2px 8px hsla(0, 0%, 0%, 0.4);
-    --shadow-glow: 0 0 20px hsla(221, 83%, 63%, 0.3);
-    --shadow-bottom-nav: 0 -2px 10px hsla(0, 0%, 0%, 0.3);
+    --shadow-card: 0 4px 12px hsla(0, 0%, 0%, 0.6);
+    --shadow-glow: 0 0 24px hsla(14, 100%, 61%, 0.4);
+    --shadow-bottom-nav: 0 -4px 16px hsla(0, 0%, 0%, 0.5);
     
     /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -73,22 +74,22 @@
   }
 
   .theme-midnight {
-    --bg-900: 222 47% 11%;
-    --bg-800: 222 40% 15%;
-    --bg-700: 222 35% 20%;
-    --bg-600: 222 30% 25%;
+    --bg-900: 240 10% 6%;
+    --bg-800: 240 10% 9%;
+    --bg-700: 240 10% 13%;
+    --bg-600: 240 10% 17%;
     
-    --accent: 217 91% 60%;
-    --accent-hover: 217 91% 67%;
+    --accent: 14 100% 61%;
+    --accent-hover: 14 100% 68%;
     
-    --border: 222 30% 25%;
-    --border-subtle: 222 35% 18%;
+    --border: 240 10% 17%;
+    --border-subtle: 240 10% 11%;
     
-    --card: 222 40% 15%;
-    --card-hover: 222 40% 17%;
+    --card: 240 10% 10%;
+    --card-hover: 240 10% 13%;
     
-    --gradient-card: linear-gradient(180deg, hsl(222 40% 15%), hsl(222 47% 12%));
-    --shadow-glow: 0 0 20px hsla(217, 91%, 60%, 0.3);
+    --gradient-card: linear-gradient(180deg, hsl(240 10% 10%), hsl(240 10% 7%));
+    --shadow-glow: 0 0 24px hsla(14, 100%, 61%, 0.4);
   }
 }
 
@@ -103,7 +104,7 @@
   }
   
   html {
-    background: hsl(var(--bg-900));
+    background: #000000;
   }
 }
 
@@ -111,6 +112,7 @@
   .ios-card {
     @apply bg-card border-0 rounded-2xl p-4 transition-all duration-200;
     box-shadow: var(--shadow-card);
+    background: linear-gradient(145deg, hsl(var(--card)), hsl(var(--bg-900)));
   }
   
   .ios-card:active {
@@ -119,8 +121,9 @@
   }
   
   .stat-card {
-    @apply bg-card border-0 rounded-2xl p-4;
+    @apply bg-card border-0 rounded-2xl p-5;
     box-shadow: var(--shadow-card);
+    background: linear-gradient(145deg, hsl(var(--card)), hsl(var(--bg-900)));
   }
   
   .glass-panel {
@@ -128,16 +131,19 @@
   }
   
   .btn-primary {
-    @apply bg-accent hover:bg-accent-hover text-accent-foreground font-medium px-6 py-3 rounded-xl;
+    @apply bg-accent hover:bg-accent-hover text-accent-foreground font-semibold px-6 py-3 rounded-xl;
     transition: var(--transition-smooth);
+    box-shadow: 0 4px 14px hsla(14, 100%, 61%, 0.3);
   }
   
   .btn-primary:active {
-    transform: scale(0.95);
+    transform: scale(0.96);
+    box-shadow: 0 2px 8px hsla(14, 100%, 61%, 0.4);
   }
   
   .bottom-nav {
-    @apply fixed bottom-0 left-0 right-0 bg-bg-800/95 backdrop-blur-md border-t border-border;
+    @apply fixed bottom-0 left-0 right-0 backdrop-blur-xl border-t border-border;
+    background: hsla(0, 0%, 0%, 0.98);
     box-shadow: var(--shadow-bottom-nav);
     padding-bottom: env(safe-area-inset-bottom);
   }
